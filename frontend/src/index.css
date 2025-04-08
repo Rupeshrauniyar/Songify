@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+body {
+ text-select: none;
+}
+@font-face {
+    font-family: 'CustomBlack';
+    src: url('../fonts/FKGroteskNeueTrial-Regular-BF6576818c3af74.otf');
+    font-weight: normal;
+    font-style: normal;
+}
+* {
+    font-family: 'CustomBlack', sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+}
+
+

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Songify</string>
+    <string name="title_activity_main">Songify</string>
+    <string name="package_name">com.songify.app</string>
+    <string name="custom_url_scheme">com.songify.app</string>
+</resources>
