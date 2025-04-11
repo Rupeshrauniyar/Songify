@@ -3,7 +3,7 @@ import {Link} from "react-router-dom";
 import {Search, Settings, Music} from "lucide-react";
 const TopNavbar = () => {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-b border-green-500/20">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-zinc-800 rounded-b-4xl backdrop-blur-sm shadow-2xl">
       <div className="max-w-full mx-auto  px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}

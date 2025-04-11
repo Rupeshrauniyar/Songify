@@ -1,12 +1,34 @@
-import {Search} from "lucide-react";
+import {Loader2, Search} from "lucide-react";
 import SongsRenderer from "../components/SongsRenderer";
 import {useUser} from "../context/UserContext";
-import {useNavigate} from "react-router-dom";
+import {Link, useLocation, useNavigate} from "react-router-dom";
 import {useEffect, useState} from "react";
+// import SongPlayerOpened from "../middlewares/SongPlayerOpened";
+import axios from "axios";
 const Home = () => {
   const [fetched, setFetched] = useState(false);
+  const [homeSongs, setHomeSongs] = useState([]);
+  const [homeSongsLoading, setHomeSongsLoading] = useState(false);
+  const api = import.meta.env.VITE_YOUTUBE_API_KEY;
   const navigate = useNavigate();
-  const {getSongs} = useUser();
+  const {open, songs, setSongs, songsLoading, setSongsLoading} = useUser();
+
+  const getSongs = async () => {
+    setHomeSongsLoading(true);
+    const response = await axios.get(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
+    );
+    // console.log(response);
+    if (response.status === 200) {
+      setHomeSongs(response.data.items);
+      setSongs(response.data.items);
+      setHomeSongsLoading(false);
+      setSongsLoading(false);
+    } else {
+      setHomeSongsLoading(false);
+      setSongsLoading(false);
+    }
+  };
   useEffect(() => {
     if (!fetched) {
       getSongs();
@@ -14,19 +36,21 @@ const Home = () => {
     }
   }, []);
   return (
-    <div className="w-full bg-black overflow-y-auto py-2">
-      <div className="flex-1 max-w-md px-2">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search songs..."
-            className="w-full px-4 py-2 pl-10 bg-black/50 border border-green-500/30 rounded-lg text-green-300 placeholder-green-400/50 focus:outline-none focus:border-green-500/50"
-          />
-          <Search className="absolute left-3 top-2.5 w-5 h-5 text-green-400/50" />
-        </div>
-      </div>
-      <h1 className="text-4xl font-black m-3">For you</h1>
-      <SongsRenderer />
+    <div className={`w-full bg-black  py-2 ${open ? "overflow-hidden mt-0" : "overflow-y-auto mt-16"}`}>
+      {open ? (
+        <></>
+      ) : (
+        <>
+          <h1 className="text-4xl font-black m-3">Songs</h1>
+          {homeSongsLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
+            </div>
+          ) : (
+            <>{homeSongs.length > 0 ? <SongsRenderer songs={homeSongs} /> : <SongsRenderer songs={songs} />}</>
+          )}
+        </>
+      )}
     </div>
   );
 };

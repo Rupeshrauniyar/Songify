@@ -1,5 +1,6 @@
 import {createContext, useState, useContext, useEffect} from "react";
 import axios from "axios";
+import {useLocation} from "react-router-dom";
 const UserContext = createContext();
 export const useUser = () => useContext(UserContext);
 
@@ -42,6 +43,40 @@ export const UserProvider = ({children}) => {
         channelTitle: "YRF Music",
         liveBroadcastContent: "none",
         publishTime: "2024-09-05T10:30:22Z",
+      },
+    },
+    {
+      kind: "youtube#searchResult",
+      etag: "BolksQDgLypkhSDg2WDI-xHUqDc",
+      id: {
+        kind: "youtube#video",
+        videoId: "Qw7PcVNAcqc",
+      },
+      snippet: {
+        publishedAt: "2024-02-08T19:28:15Z",
+        channelId: "UCAR2K0wg0xLjykssIXY41nA",
+        title: "Monali Thakur Live 2024|#utshorts|#viral|#shorts|#uts|#fact|#viralvideo|#kumarsanu|#alka|#vlogs|576",
+        description: "Monali Thakur Live Stage performance of Monali Thakur Live performance of Monali Thakur #uditnarayan #udit Monali Thakur ...",
+        thumbnails: {
+          default: {
+            url: "https://i.ytimg.com/vi/Qw7PcVNAcqc/default.jpg",
+            width: 120,
+            height: 90,
+          },
+          medium: {
+            url: "https://i.ytimg.com/vi/Qw7PcVNAcqc/mqdefault.jpg",
+            width: 320,
+            height: 180,
+          },
+          high: {
+            url: "https://i.ytimg.com/vi/Qw7PcVNAcqc/hqdefault.jpg",
+            width: 480,
+            height: 360,
+          },
+        },
+        channelTitle: "Magical Arena",
+        liveBroadcastContent: "none",
+        publishTime: "2024-02-08T19:28:15Z",
       },
     },
     {
@@ -181,43 +216,23 @@ export const UserProvider = ({children}) => {
       },
     },
   ]);
+
+  const [open, setOpen] = useState();
+
   const [selectedSong, setSelectedSong] = useState({});
   const [selectedIndex, setSelectedIndex] = useState();
   const [audioUrl, setAudioUrl] = useState(null);
   const [songsLoading, setSongsLoading] = useState(true);
   const [rapidProcessing, setRapidProcessing] = useState(false);
-  const checkLoggedIn = async () => {
-    try {
-      // Check localStorage first for token
-      const token = localStorage.getItem("token");
-      if (token) {
-        // Validate token with backend (you'll need to implement this endpoint)
-        const response = await fetch("/api/auth/validate", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  let randomKey;
+  let randomNumber;
 
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-        } else {
-          // Token invalid, remove it
-          localStorage.removeItem("token");
-        }
-      }
-    } catch (error) {
-      console.error("Authentication error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
   const getSongs = async () => {
     setSongsLoading(true);
     const response = await axios.get(
       `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
     );
-    console.log(response);
+    // console.log(response);
     if (response.status === 200) {
       setSongs(response.data.items);
       setSongsLoading(false);
@@ -229,13 +244,26 @@ export const UserProvider = ({children}) => {
   const fetchData = async (id) => {
     console.log(id);
     setRapidProcessing(true);
+    const apiKeys = [
+      import.meta.env.VITE_RAPID_API_KEY1,
+      import.meta.env.VITE_RAPID_API_KEY2,
+      import.meta.env.VITE_RAPID_API_KEY3,
+      import.meta.env.VITE_RAPID_API_KEY4,
+      import.meta.env.VITE_RAPID_API_KEY5,
+      import.meta.env.VITE_RAPID_API_KEY6,
+    ];
+
+    randomNumber = Math.floor(Math.random() * apiKeys.length);
+    randomKey = apiKeys[randomNumber];
+
+    console.log(randomKey);
     try {
       const options = {
         method: "GET",
         url: "https://youtube-mp36.p.rapidapi.com/dl",
         params: {id},
         headers: {
-          "x-rapidapi-key": import.meta.env.VITE_RAPID_API_KEY,
+          "x-rapidapi-key": randomKey,
           "x-rapidapi-host": "youtube-mp36.p.rapidapi.com",
         },
       };
@@ -244,79 +272,40 @@ export const UserProvider = ({children}) => {
       if (response.data) {
         setAudioUrl(response.data.link);
         setRapidProcessing(false);
+      }
+    } catch (error) {
+      let secondRandomNum = randomNumber + 1;
+      randomKey = apiKeys[secondRandomNum];
+      const options = {
+        method: "GET",
+        url: "https://youtube-mp36.p.rapidapi.com/dl",
+        params: {id},
+        headers: {
+          "x-rapidapi-key": randomKey,
+          "x-rapidapi-host": "youtube-mp36.p.rapidapi.com",
+        },
+      };
+      const response = await axios.request(options);
+      if (response.data) {
+        setAudioUrl(response.data.link);
+        setRapidProcessing(false);
       } else {
         setRapidProcessing(false);
       }
-    } catch (error) {
-      console.error(error);
-      setRapidProcessing(false);
     }
   };
 
-  const signIn = async (email, password) => {
-    setLoading(true);
-    try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {email, password});
 
-      if (!response.ok) {
-        throw new Error("Login failed");
-      }
 
-      const data = await response.json();
-      localStorage.setItem("token", data.token);
-      setUser(data.user);
-      return {success: true};
-    } catch (error) {
-      console.error("Login error:", error);
-      return {success: false, error: error.message};
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const signUp = async (userData) => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Registration failed");
-      }
-
-      const data = await response.json();
-      localStorage.setItem("token", data.token);
-      setUser(data.user);
-      return {success: true};
-    } catch (error) {
-      console.error("Registration error:", error);
-      return {success: false, error: error.message};
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-  };
 
   const value = {
-    user,
-    setUser,
-    loading,
-    setLoading,
-    signIn,
-    signUp,
-    signOut,
+
     getSongs,
     songs,
+    setSongs,
     songsLoading,
+    setSongsLoading,
     selectedSong,
     setSelectedSong,
     audioUrl,
@@ -326,6 +315,8 @@ export const UserProvider = ({children}) => {
     fetchData,
     rapidProcessing,
     setRapidProcessing,
+    open,
+    setOpen,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
