@@ -4,11 +4,12 @@ import {Play, Pause, SkipBack, SkipForward, ArrowLeft, ArrowDown, GripHorizontal
 import {useUser} from "../context/UserContext";
 import {useNavigate} from "react-router-dom";
 import SongsRenderer from "./SongsRenderer";
+import audioService from "../services/BackgroundAudioService";
 
 const SongPlayer = () => {
   const audioRef = useRef(null);
   const playerRef = useRef(null);
-  const {rapidProcessing, songs, setAudioUrl, selectedSong, selectedIndex, setSelectedIndex, setSelectedSong, audioUrl, fetchData, open, setOpen} = useUser();
+  const {rapidProcessing, songs, selectedSong, selectedIndex, setSelectedIndex, setSelectedSong, audioUrl, fetchData, open} = useUser();
   const [isPlaying, setIsPlaying] = useState(false);
   const [songCurrentTime, setSongCurrentTime] = useState(0);
   const [songDuration, setSongDuration] = useState(0);
@@ -70,10 +71,36 @@ const SongPlayer = () => {
       navigate("?open=true");
     }
   };
+  const onPlayPause = (e) => {
+    // e.stopPropagation();
+    if (isPlaying) {
+      // console.log("onPlayPause");
+      audioService.pause();
+      audioRef?.current?.pause();
+      setIsPlaying(false);
+    } else {
+      // console.log("onPlayPause");
+      audioService.resume();
+      audioRef?.current?.play();
+      setIsPlaying(true);
+    }
+  };
 
+  const onNotificationPlayPause = () => {
+    console.log("Notification play/pause triggered, current state:", isPlaying);
+    
+    // Toggle playback state
+    if (isPlaying) {
+      setIsPlaying(false);
+      audioService.pause();
+    } else {
+      setIsPlaying(true);
+      audioService.resume();
+    }
+  };
   const playNextSong = async () => {
     if (selectedIndex < songs.length - 1) {
-      audioRef.current.src = "";
+      audioService.pause();
       setSelectedIndex(selectedIndex + 1);
       setSelectedSong(songs[selectedIndex + 1]);
       await fetchData(songs[selectedIndex + 1].id.videoId);
@@ -90,13 +117,11 @@ const SongPlayer = () => {
   };
   const playPreviousSong = async () => {
     if (selectedIndex > 0) {
-      audioRef.current.pause();
+      audioService.pause();
       setSelectedSong(songs[selectedIndex - 1]);
       setSelectedIndex(selectedIndex - 1);
       await fetchData(songs[selectedIndex - 1].id.videoId);
       setEnded(false);
-
-      // setSongCurrentTime(0);
       setSongCurrentHour(0);
       setSongCurrentMinutes(0);
       setSongCurrentSeconds(0);
@@ -106,64 +131,113 @@ const SongPlayer = () => {
       // audioRef.current.play();
     }
   };
+
   const onNext = (e) => {
     playNextSong();
     e.stopPropagation();
   };
+
   const onPrevious = (e) => {
     playPreviousSong();
     e.stopPropagation();
   };
 
   useEffect(() => {
+    // Set up callbacks for the audio service
+    audioService.setCallbacks({
+      onNext: playNextSong,
+      onPrevious: playPreviousSong,
+      onPlayPause: onNotificationPlayPause,
+    });
+
+    // Initialize audio element
     if (audioUrl) {
-      audioRef.current.src = audioUrl;
-      audioRef.current.play();
-      setIsPlaying(true);
-      // console.log("audioRef.current.currentTime", audioRef.current.duration);
-    }
-    // console.log(audioUrl);
-  }, [audioUrl]);
-  useEffect(() => {
-    audioRef.current.addEventListener("ended", playNextSong);
-  }, [audioRef]);
-  useEffect(() => {
-    if (ended) {
-      playNextSong();
-    }
-  }, [ended]);
-  useEffect(() => {
-    if (open && audioRef.current.src) {
-      audioRef.current.addEventListener("timeupdate", () => {
-        // console.log("audioRef.current.duration", audioRef.current.duration);
-        setSongDuration(audioRef.current.duration);
-        setSongCurrentTime(audioRef.current.currentTime);
-        // setSongCurrentTime(0);
-        setSongCurrentHour(0);
-        setSongCurrentMinutes(0);
-        setSongCurrentSeconds(0);
-        setSongDurationHours(0);
-        setSongDurationMinutes(0);
-        setSongDurationSeconds(0);
-        if (audioRef.current.duration > 3600) {
-          setSongCurrentHour(Math.floor(audioRef.current.currentTime / 60 / 60));
-          setSongCurrentMinutes(Math.floor((audioRef.current.currentTime / 60) % 60));
-          setSongCurrentSeconds(Math.floor(audioRef.current.currentTime % 60));
-        } else {
-          setSongCurrentMinutes(Math.floor(audioRef.current.currentTime / 60));
-          setSongCurrentSeconds(Math.floor(audioRef.current.currentTime % 60));
-        }
-        if (audioRef.current.duration > 3600) {
-          setSongDurationHours(Math.floor(audioRef.current.duration / 60 / 60));
-          setSongDurationMinutes(Math.floor((audioRef.current.duration / 60) % 60));
-          setSongDurationSeconds(Math.floor(audioRef.current.duration % 60));
-        } else {
-          setSongDurationMinutes(Math.floor((audioRef.current.duration / 60) % 60));
-          setSongDurationSeconds(Math.floor(audioRef.current.duration % 60));
-        }
+      // console.log("herororororo");
+      // audioRef.current.src = audioUrl;
+
+      audioService.play({
+        url: audioUrl,
+        title: selectedSong?.title || selectedSong?.snippet?.title || "Unknown",
+        channelTitle: selectedSong?.channelTitle || selectedSong?.snippet?.channelTitle || "Unknown Artist",
+        thumbnail: selectedSong?.thumbnails?.high?.url || selectedSong?.snippet?.thumbnails?.high?.url,
       });
+      setIsPlaying(true);
+      // audioRef?.current?.play();
     }
-  }, [audioRef, open]);
+
+    return () => {
+      audioService.pause();
+      setIsPlaying(false);
+      // audioRef?.current?.pause();
+      audioService.pause();
+    };
+  }, [audioUrl, selectedSong]);
+
+  // Fix the event listener - instead of directly calling the function, pass a reference to it
+  useEffect(() => {
+    const handleTrackEnd = () => {
+      playNextSong();
+    };
+
+    if (audioRef.current) {
+      audioRef?.current?.addEventListener("ended", handleTrackEnd);
+
+      return () => {
+        audioRef?.current?.removeEventListener("ended", handleTrackEnd);
+      };
+    }
+  }, [audioRef.current]);
+
+  // Only keep this improved version:
+  useEffect(() => {
+    // Function to handle time updates
+    const handleTimeUpdate = () => {
+      // Update current playback time
+      setSongCurrentTime(audioService.audioElement.currentTime);
+      
+      // Update song duration (only if it has changed or is 0)
+      if (songDuration === 0 || songDuration !== audioService.audioElement.duration) {
+        setSongDuration(audioService.audioElement.duration);
+        
+        // Update duration time display
+        if (audioService.audioElement.duration > 3600) {
+          setSongDurationHours(Math.floor(audioService.audioElement.duration / 60 / 60));
+          setSongDurationMinutes(Math.floor((audioService.audioElement.duration / 60) % 60));
+          setSongDurationSeconds(Math.floor(audioService.audioElement.duration % 60));
+        } else {
+          setSongDurationHours(0);
+          setSongDurationMinutes(Math.floor(audioService.audioElement.duration / 60));
+          setSongDurationSeconds(Math.floor(audioService.audioElement.duration % 60));
+        }
+      }
+      
+      // Update current time display
+      if (audioService.audioElement.duration > 3600) {
+        setSongCurrentHour(Math.floor(audioService.audioElement.currentTime / 60 / 60));
+        setSongCurrentMinutes(Math.floor((audioService.audioElement.currentTime / 60) % 60));
+        setSongCurrentSeconds(Math.floor(audioService.audioElement.currentTime % 60));
+      } else {
+        setSongCurrentHour(0);
+        setSongCurrentMinutes(Math.floor(audioService.audioElement.currentTime / 60));
+        setSongCurrentSeconds(Math.floor(audioService.audioElement.currentTime % 60));
+      }
+    };
+
+    // Only attach the event listener if we have a valid audio element
+    if (open && audioService.audioElement) {
+      audioService.audioElement.addEventListener("timeupdate", handleTimeUpdate);
+      
+      // Initial update to set values
+      if (audioService.audioElement.duration) {
+        handleTimeUpdate();
+      }
+      
+      // Clean up the event listener when component unmounts or dependencies change
+      return () => {
+        audioService.audioElement.removeEventListener("timeupdate", handleTimeUpdate);
+      };
+    }
+  }, [open, audioService.audioElement, songDuration]);
 
   return (
     <>
@@ -174,7 +248,7 @@ const SongPlayer = () => {
 
       {open ? (
         <>
-          {/* {console.log(selectedSong, selectedIndex)} */}
+          {/* {console.log(songCurrentHour, songCurrentMinutes, songCurrentSeconds, songDurationHours, songDurationMinutes, songDurationSeconds, open, audioRef)} */}
           <motion.div
             initial={{x: 0, y: -1000}}
             animate={{x: -1, y: -0}}
@@ -211,12 +285,14 @@ const SongPlayer = () => {
                 <input
                   type="range"
                   min="0"
-                  max={songDuration ? songDuration : audioRef?.current?.duration ? audioRef.current.duration : 0}
+                  max={songDuration ? songDuration : 0}
                   value={songCurrentTime}
                   onChange={(e) => {
-                    audioRef.current.currentTime = e.target.value;
-                    setSongCurrentTime(e.target.value);
-                    setSongDuration(audioRef.current.duration);
+                    const newTime = parseFloat(e.target.value);
+                    if (audioService.audioElement) {
+                      audioService.audioElement.currentTime = newTime;
+                      setSongCurrentTime(newTime);
+                    }
                   }}
                   className="w-full h-2 bg-zinc-500 rounded-full appearance-none cursor-pointer accent-green-500"
                 />
@@ -224,12 +300,14 @@ const SongPlayer = () => {
                   <span className="text-green-400/60 text-xs"></span>
                   <span className="text-green-400/60 ">
                     {songCurrentHour > 0 ? `${songCurrentHour}:` : ""}
-                    {songCurrentMinutes}:{songCurrentSeconds}/
+                    {songCurrentMinutes < 10 && songCurrentHour > 0 ? `0${songCurrentMinutes}` : songCurrentMinutes}:
+                    {songCurrentSeconds < 10 ? `0${songCurrentSeconds}` : songCurrentSeconds}/
                     <>
                       {songDurationSeconds ? (
                         <>
                           {songDurationHours > 0 ? `${songDurationHours}:` : ""}
-                          {songDurationMinutes}:{songDurationSeconds}
+                          {songDurationMinutes < 10 && songDurationHours > 0 ? `0${songDurationMinutes}` : songDurationMinutes}:
+                          {songDurationSeconds < 10 ? `0${songDurationSeconds}` : songDurationSeconds}
                         </>
                       ) : (
                         <>0:00</>
@@ -248,25 +326,7 @@ const SongPlayer = () => {
                 <button
                   // onClick={onPlayPause}
                   className="p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded-full transition-colors">
-                  {rapidProcessing ? (
-                    <>Loading</>
-                  ) : isPlaying ? (
-                    <Pause
-                      onClick={(e) => {
-                        audioRef.current.pause();
-                        setIsPlaying(false);
-                        e.stopPropagation();
-                      }}
-                    />
-                  ) : (
-                    <Play
-                      onClick={(e) => {
-                        audioRef.current.play();
-                        setIsPlaying(true);
-                        e.stopPropagation();
-                      }}
-                    />
-                  )}
+                  {rapidProcessing ? <>Loading</> : isPlaying ? <Pause onClick={(e) => onPlayPause(e)} /> : <Play onClick={(e) => onPlayPause(e)} />}
                 </button>
 
                 <button
@@ -346,25 +406,7 @@ const SongPlayer = () => {
                 <button
                   onClick={(e) => e.stopPropagation()}
                   className="p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded-full transition-colors">
-                  {rapidProcessing ? (
-                    <>Loading</>
-                  ) : isPlaying ? (
-                    <Pause
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        audioRef.current.pause();
-                        setIsPlaying(false);
-                      }}
-                    />
-                  ) : (
-                    <Play
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        audioRef.current.play();
-                        setIsPlaying(true);
-                      }}
-                    />
-                  )}
+                  {rapidProcessing ? <>Loading</> : isPlaying ? <Pause onClick={(e) => onPlayPause(e)} /> : <Play onClick={(e) => onPlayPause(e)} />}
                 </button>
 
                 <button

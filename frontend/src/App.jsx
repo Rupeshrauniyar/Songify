@@ -26,38 +26,38 @@ const BackButtonHandler = () => {
     const handleBackButton = async () => {
       // Get URL parameters (for example, checking if player is open)
       const urlParams = new URLSearchParams(window.location.search);
-      const isPlayerOpen = urlParams.get('open') === 'true';
+      const isPlayerOpen = urlParams.get("open") === "true";
 
       // If player is open, close it instead of navigating back
       if (isPlayerOpen) {
-        navigate('?open=false');
+        navigate("?open=false");
         return;
       }
 
       // If we're on the home page, show exit confirmation
-      if (location.pathname === '/') {
+      if (location.pathname === "/") {
         const now = new Date().getTime();
-        
+
         if (now - lastBackPress < EXIT_TIMEOUT) {
           // User pressed back button twice within timeout, exit app
           App.exitApp();
         } else {
           // First press, show toast and update timestamp
           setLastBackPress(now);
-          
+
           // Show a toast message
-          const toast = document.createElement('div');
-          toast.className = 'fixed bottom-20 left-0 right-0 mx-auto w-64 p-2 bg-zinc-800 text-white text-center rounded-lg z-50';
-          toast.textContent = 'Press back again to exit';
+          const toast = document.createElement("div");
+          toast.className = "fixed bottom-20 left-0 right-0 mx-auto w-64 p-2 bg-zinc-800 text-white text-center rounded-lg z-50";
+          toast.textContent = "Press back again to exit";
           document.body.appendChild(toast);
-          
+
           // Remove toast after 2 seconds
           setTimeout(() => {
             if (document.body.contains(toast)) {
               document.body.removeChild(toast);
             }
           }, EXIT_TIMEOUT);
-          
+
           return;
         }
       } else {
@@ -67,12 +67,12 @@ const BackButtonHandler = () => {
     };
 
     // Register hardware back button event handler
-    const backButtonListener = App.addListener('backButton', handleBackButton);
+    const backButtonListener =  App.addListener("backButton", handleBackButton);
 
     // Cleanup
-    return () => {
+    return  () => {
       if (backButtonListener) {
-        backButtonListener.remove();
+         backButtonListener.remove();
       }
     };
   }, [navigate, location.pathname, lastBackPress]);

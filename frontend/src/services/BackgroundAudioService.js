@@ -1,5 +1,6 @@
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { CapacitorMusicControls  } from 'capacitor-music-controls-plugin';
 
 class AudioService {
   constructor() {
@@ -13,6 +14,23 @@ class AudioService {
     };
     this.setupAudio();
     this.setupMediaSession();
+    this.setupAppEvents();
+  }
+
+  setupAppEvents() {
+    // Handle app state changes
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive && this.isPlaying) {
+        // App went to background - ensure music keeps playing
+        this.updateMusicControls();
+      }
+    });
+
+    // Handle device back button (Android)
+    App.addListener('backButton', () => {
+      // Prevent back button from stopping music
+      return false;
+    });
   }
 
   setupMediaSession() {
@@ -56,7 +74,7 @@ class AudioService {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.isPlaying) {
         // App went to background, keep playing
-        this.audioElement.play();
+        this.updateMusicControls();
       }
     });
   }
@@ -77,6 +95,7 @@ class AudioService {
       await this.audioElement.play();
       this.isPlaying = true;
       this.updateMediaSession();
+      this.updateMusicControls();
     } catch (error) {
       console.error('Error playing track:', error);
     }
@@ -89,6 +108,7 @@ class AudioService {
       await this.audioElement.pause();
       this.isPlaying = false;
       this.updateMediaSession();
+      this.updateMusicControls();
     } catch (error) {
       console.error('Error pausing track:', error);
     }
@@ -101,18 +121,19 @@ class AudioService {
       await this.audioElement.play();
       this.isPlaying = true;
       this.updateMediaSession();
+      this.updateMusicControls();
     } catch (error) {
       console.error('Error resuming track:', error);
     }
   }
 
-  async skipToNext() {
+  skipToNext() {
     if (this.callbacks.onNext) {
       this.callbacks.onNext();
     }
   }
 
-  async skipToPrevious() {
+  skipToPrevious() {
     if (this.callbacks.onPrevious) {
       this.callbacks.onPrevious();
     }
@@ -130,7 +151,7 @@ class AudioService {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: this.currentTrack.title || 'Unknown Title',
         artist: this.currentTrack.channelTitle || 'Unknown Channel',
-        album: 'YouTube Audio',
+        album: 'Songify',
         artwork: [
           { src: this.currentTrack.thumbnail, sizes: '96x96', type: 'image/jpeg' },
           { src: this.currentTrack.thumbnail, sizes: '128x128', type: 'image/jpeg' },
@@ -142,6 +163,58 @@ class AudioService {
       });
 
       navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
+    }
+  }
+
+  updateMusicControls() {
+    // Only run on native platforms
+    if (Capacitor.isNativePlatform() && this.currentTrack) {
+      try {
+        MusicControls.create({
+          track: this.currentTrack.title || 'Unknown Title',
+          artist: this.currentTrack.channelTitle || 'Unknown Artist',
+          cover: this.currentTrack.thumbnail,
+          isPlaying: this.isPlaying,
+          dismissable: false,
+          hasPrev: true,
+          hasNext: true,
+          hasClose: false,
+          album: 'Songify',
+          // Android
+          ticker: `Now playing: ${this.currentTrack.title}`,
+          // iOS
+          duration: this.audioElement.duration ? this.audioElement.duration : 0,
+          elapsed: this.audioElement.currentTime ? this.audioElement.currentTime : 0,
+          hasSkipForward: true,
+          hasSkipBackward: true,
+          skipForwardInterval: 15,
+          skipBackwardInterval: 15,
+        });
+
+        // Listen for control events
+        MusicControls.addListener('controlsNotification', (info) => {
+          const { action } = info;
+          switch (action) {
+            case 'play':
+              this.resume();
+              break;
+            case 'pause':
+              this.pause();
+              break;
+            case 'next':
+              this.skipToNext();
+              break;
+            case 'prev':
+              this.skipToPrevious();
+              break;
+          }
+        });
+
+        // Show the controls in notification area
+        MusicControls.listen();
+      } catch (error) {
+        console.error('Error setting up music controls:', error);
+      }
     }
   }
 

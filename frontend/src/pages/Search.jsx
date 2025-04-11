@@ -10,18 +10,51 @@ const Search = () => {
   const [songs, setSongs] = useState([]);
   const [search, setSearch] = useState("");
   const [songsLoading, setSongsLoading] = useState(false);
-  const api = import.meta.env.VITE_YOUTUBE_API_KEY;
+  const apis = [
+    import.meta.env.VITE_YOUTUBE_API_KEY1,
+    import.meta.env.VITE_YOUTUBE_API_KEY2,
+    import.meta.env.VITE_YOUTUBE_API_KEY3,
+    import.meta.env.VITE_YOUTUBE_API_KEY4,
+    import.meta.env.VITE_YOUTUBE_API_KEY5,
+    import.meta.env.VITE_YOUTUBE_API_KEY6,
+  ];
+  let randomNum;
+  let api;
+
   const getSongs = async () => {
     if (search.length > 3) {
+      randomNum = Math.floor(Math.random() * apis.length);
+      api = apis[randomNum];
       setSongsLoading(true);
-      const response = await axios.get(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=${search}&type=music`
-      );
-      // console.log(response);
-      if (response.status === 200) {
-        setSongs(response.data.items);
-        setSongsLoading(false);
-      } else {
+      try {
+        const response = await axios.get(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=${search}&type=music`
+        );
+        // console.log(response);
+        if (response.status === 200) {
+          setSongs(response.data.items);
+          setSongsLoading(false);
+        } else {
+          setSongsLoading(false);
+        }
+      } catch (err) {
+        randomNum = randomNum + 1;
+        api = apis[randomNum];
+        if (randomNum < apis.length) {
+          const response = await axios.get(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=${search}&type=music`
+          );
+          // console.log(response);
+          if (response.status === 200) {
+            setSongs(response.data.items);
+            setSongsLoading(false);
+          } else {
+            alert("Please try again.");
+            setSongsLoading(false);
+          }
+        } else {
+          alert("Please try again.");
+        }
         setSongsLoading(false);
       }
     } else {

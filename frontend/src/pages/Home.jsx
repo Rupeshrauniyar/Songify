@@ -6,26 +6,55 @@ import {useEffect, useState} from "react";
 // import SongPlayerOpened from "../middlewares/SongPlayerOpened";
 import axios from "axios";
 const Home = () => {
+  const {open, songs, setSongs, songsLoading, setSongsLoading} = useUser();
+  const navigate = useNavigate();
+
   const [fetched, setFetched] = useState(false);
   const [homeSongs, setHomeSongs] = useState([]);
   const [homeSongsLoading, setHomeSongsLoading] = useState(false);
-  const api = import.meta.env.VITE_YOUTUBE_API_KEY;
-  const navigate = useNavigate();
-  const {open, songs, setSongs, songsLoading, setSongsLoading} = useUser();
-
+  const apis = [
+    import.meta.env.VITE_YOUTUBE_API_KEY1,
+    import.meta.env.VITE_YOUTUBE_API_KEY2,
+    import.meta.env.VITE_YOUTUBE_API_KEY3,
+    import.meta.env.VITE_YOUTUBE_API_KEY4,
+    import.meta.env.VITE_YOUTUBE_API_KEY5,
+    import.meta.env.VITE_YOUTUBE_API_KEY6,
+  ];
+  let randomNum;
+  let api;
   const getSongs = async () => {
+    randomNum = Math.floor(Math.random() * apis.length);
+    api = apis[randomNum];
     setHomeSongsLoading(true);
-    const response = await axios.get(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
-    );
-    // console.log(response);
-    if (response.status === 200) {
-      setHomeSongs(response.data.items);
-      setSongs(response.data.items);
-      setHomeSongsLoading(false);
+    try {
+      const response = await axios.get(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
+      );
+      // console.log(response);
+      if (response.status === 200) {
+        setHomeSongs(response.data.items);
+        setSongs(response.data.items);
+        setHomeSongsLoading(false);
+      }
       setSongsLoading(false);
-    } else {
-      setHomeSongsLoading(false);
+    } catch (err) {
+      randomNum = randomNum + 1;
+      api = apis[randomNum];
+      if (randomNum < apis.length) {
+        const response = await axios.get(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
+        );
+        // console.log(response);
+        if (response.status === 200) {
+          setHomeSongs(response.data.items);
+          setSongs(response.data.items);
+          setHomeSongsLoading(false);
+          setSongsLoading(false);
+        }
+      } else {
+        setHomeSongsLoading(false);
+        setSongsLoading(false);
+      }
       setSongsLoading(false);
     }
   };
