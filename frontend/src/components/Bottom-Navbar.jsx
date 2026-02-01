@@ -33,14 +33,14 @@ const BottomNavbar = () => {
   ];
   return (
     <>
-      <div className="xl:hidden flex  items-center justify-between cursor-pointer fixed bottom-0 left-0 right-0 z-50 h-20 bg-zinc-800 text-white  px-4">
+      <div className="xl:hidden flex  items-center justify-between cursor-pointer fixed bottom-0 left-0 right-0 z-50 h-15 bg-zinc-800 text-white  px-4">
         {NavigateOptions.map((Option, i) => (
           <NavLink
             to={Option.path}
             key={i}
             className={`flex flex-col text-xs items-center justify-center ${activePath.pathname === Option.path ? "text-green-500" : "text-gray-300"}`}>
             <Option.icon />
-            <p>{Option.label}</p>
+            {/* <p>{Option.label}</p> */}
           </NavLink>
         ))}
       </div>

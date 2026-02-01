@@ -1,12 +1,12 @@
-import {Loader2, Search} from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import SongsRenderer from "../components/SongsRenderer";
-import {useUser} from "../context/UserContext";
-import {Link, useLocation, useNavigate} from "react-router-dom";
-import {useEffect, useState} from "react";
+import { useUser } from "../context/UserContext";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 // import SongPlayerOpened from "../middlewares/SongPlayerOpened";
 import axios from "axios";
 const Home = () => {
-  const {open, songs, setSongs, songsLoading, setSongsLoading} = useUser();
+  const { open, songs, setSongs, songsLoading, setSongsLoading } = useUser();
   const navigate = useNavigate();
 
   const [fetched, setFetched] = useState(false);
@@ -28,10 +28,23 @@ const Home = () => {
     setHomeSongsLoading(true);
     try {
       const response = await axios.get(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
+        "https://www.googleapis.com/youtube/v3/videos",
+        {
+          params: {
+            part: "snippet,statistics",
+            chart: "mostPopular",
+            videoCategoryId: "10", // Music
+            regionCode: "IN",
+            relevanceLanguage: "hi", // Bias toward Hindi
+            maxResults: 20,
+            key: api,
+          },
+        }
       );
+
       // console.log(response);
       if (response.status === 200) {
+        console.log(response);
         setHomeSongs(response.data.items);
         setSongs(response.data.items);
         setHomeSongsLoading(false);
@@ -42,8 +55,20 @@ const Home = () => {
       api = apis[randomNum];
       if (randomNum < apis.length) {
         const response = await axios.get(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
+          "https://www.googleapis.com/youtube/v3/videos",
+          {
+            params: {
+              part: "snippet,statistics",
+              chart: "mostPopular",
+              videoCategoryId: "10", // Music
+              regionCode: "IN",
+              relevanceLanguage: "hi", // Bias toward Hindi
+              maxResults: 20,
+              key: api,
+            },
+          }
         );
+
         // console.log(response);
         if (response.status === 200) {
           setHomeSongs(response.data.items);
@@ -65,7 +90,11 @@ const Home = () => {
     }
   }, []);
   return (
-    <div className={`w-full bg-black  py-2 ${open ? "overflow-hidden mt-0" : "overflow-y-auto mt-16"}`}>
+    <div
+      className={`w-full bg-black  py-2 ${
+        open ? "overflow-hidden mt-0" : "overflow-y-auto mt-16"
+      }`}
+    >
       {open ? (
         <></>
       ) : (
@@ -76,7 +105,13 @@ const Home = () => {
               <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
             </div>
           ) : (
-            <>{homeSongs.length > 0 ? <SongsRenderer songs={homeSongs} /> : <SongsRenderer songs={songs} />}</>
+            <>
+              {homeSongs.length > 0 ? (
+                <SongsRenderer songs={homeSongs} />
+              ) : (
+                <SongsRenderer songs={songs} />
+              )}
+            </>
           )}
         </>
       )}

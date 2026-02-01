@@ -4,19 +4,19 @@ import {useUser} from "../context/UserContext";
 import axios from "axios";
 import {motion} from "framer-motion";
 const SongsRenderer = (props) => {
-  const {user,  songsLoading, selectedSong, setSelectedSong, setAudioUrl, setSelectedIndex, fetchData} = useUser();
+  const { user, songsLoading, selectedSong, setSelectedSong, setSelectedIndex, fetchData, addToHistory } = useUser();
 
   const playSong = (song, i) => {
+    const videoId = song?.id?.videoId ?? song?.id;
+    if (!videoId) return;
+    addToHistory?.(song);
     setSelectedSong(song);
-    console.log(song);
-    const id = song.id.videoId;
     setSelectedIndex(i);
     try {
-      fetchData(id);
-  
+      fetchData(videoId);
     } catch (error) {
-      console.log(error);
-      alert("Error playing song.Try again");
+      console.error(error);
+      alert("Error playing song. Try again.");
     }
   };
 

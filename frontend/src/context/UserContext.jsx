@@ -219,6 +219,43 @@ export const UserProvider = ({children}) => {
 
   const [open, setOpen] = useState();
 
+  const HISTORY_KEY = "songify_history";
+  const HISTORY_LIMIT = 50;
+
+  const loadHistory = () => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const [history, setHistory] = useState(() => loadHistory());
+
+  const addToHistory = (item) => {
+    if (!item) return;
+    const videoId = item?.id?.videoId ?? item?.id;
+    const fileUri = item?.fileUri;
+    if (!videoId && !fileUri) return;
+
+    setHistory((prev) => {
+      const normalized = {
+        ...item,
+        _videoId: videoId || null,
+        _fileUri: fileUri || null,
+      };
+      const isDuplicate = (h) =>
+        (videoId && h?._videoId === videoId) ||
+        (fileUri && h?._fileUri === fileUri);
+      let next = prev.filter((h) => !isDuplicate(h));
+      next = [normalized, ...next].slice(0, HISTORY_LIMIT);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const [selectedSong, setSelectedSong] = useState({});
   const [selectedIndex, setSelectedIndex] = useState();
   const [audioUrl, setAudioUrl] = useState(null);
@@ -230,7 +267,7 @@ export const UserProvider = ({children}) => {
   const getSongs = async () => {
     setSongsLoading(true);
     const response = await axios.get(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&chart=mostPopular&regionCode=IN&key=${api}&q=viral+bollywood+movie+songs&type=video`
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=14&regionCode=IN&key=${api}&q=trending+insta+songs&type=video`
     );
     // console.log(response);
     if (response.status === 200) {
@@ -242,7 +279,7 @@ export const UserProvider = ({children}) => {
   };
 
   const fetchData = async (id) => {
-    console.log(id);
+    // console.log(id);
     setRapidProcessing(true);
     const apiKeys = [
       import.meta.env.VITE_RAPID_API_KEY1,
@@ -256,7 +293,7 @@ export const UserProvider = ({children}) => {
     randomNumber = Math.floor(Math.random() * apiKeys.length);
     randomKey = apiKeys[randomNumber];
 
-    console.log(randomKey);
+    // console.log(randomKey);
     try {
       const options = {
         method: "GET",
@@ -300,7 +337,6 @@ export const UserProvider = ({children}) => {
 
 
   const value = {
-
     getSongs,
     songs,
     setSongs,
@@ -317,6 +353,8 @@ export const UserProvider = ({children}) => {
     setRapidProcessing,
     open,
     setOpen,
+    history,
+    addToHistory,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

@@ -6,10 +6,10 @@ const SongCard = (props) => {
   return (
     <motion.div
       className={`group flex items-center gap-4 p-2 rounded-lg transition-all duration-300 cursor-pointer ${
-        selectedSong?.id?.videoId === props?.song?.id?.videoId ? "bg-green-800" : "bg-zinc-900  hover:bg-green-100/10"
+        selectedSong?.id === props?.song?.id ? "bg-green-800" : "bg-zinc-900  hover:bg-green-100/10"
       }`}
       whileTap={{scale: 0.99}}>
-      {/* {console.log(selectedSong?.id?.videoId, props?.song?.id?.videoId)} */}
+      {/* {console.log(selectedSong?.id, props?.song?.id)} */}
       <div className="relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-lg">
         <img
           src={props.song?.snippet?.thumbnails?.high?.url || "https://via.placeholder.com/300x300?text=No+Thumbnail"}
